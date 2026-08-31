@@ -183,9 +183,15 @@ func (c *client) scrobble(ctx context.Context, sessionKey string, info ScrobbleI
 	if err != nil {
 		return err
 	}
-	if resp.Scrobbles.Scrobble.IgnoredMessage.Code != "0" {
-		log.Warn(ctx, "LastFM: scrobble was ignored", "code", resp.Scrobbles.Scrobble.IgnoredMessage.Code,
-			"text", resp.Scrobbles.Scrobble.IgnoredMessage.Text, "info", info)
+	if code := resp.Scrobbles.Scrobble.IgnoredMessage.Code; code != "0" {
+		if code == "3" {
+			// Last.fm rejects scrobbles whose timestamp is older than 14 days; the buffer drops it.
+			log.Warn(ctx, "LastFM: scrobble dropped, timestamp too old (older than 14 days)",
+				"code", code, "info", info)
+		} else {
+			log.Warn(ctx, "LastFM: scrobble was ignored", "code", code,
+				"text", resp.Scrobbles.Scrobble.IgnoredMessage.Text, "info", info)
+		}
 	}
 	if resp.Scrobbles.Attr.Accepted != 1 {
 		log.Warn(ctx, "LastFM: scrobble was not accepted", "code", resp.Scrobbles.Scrobble.IgnoredMessage.Code,
